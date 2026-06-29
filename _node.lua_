@@ -1402,6 +1402,19 @@ local function TimeTile(asset, config, x1, y1, x2, y2)
 
         local show_seconds = clock_type == "hms" or clock_type == "hms_12"
 
+        -- local function dots()
+        --     gl.pushMatrix()
+        --         gl.rotate(90, 0, 0, 1)
+        --         for i = 0, 55,5 do
+        --             if i % 15 == 0 then
+        --                 pixel:draw(radius-unit, -unit/2, radius, unit/2, 0.8)
+        --             else 
+        --                 pixel:draw(radius-unit/2, -unit/4, radius, unit/4, 0.8)
+        --             end
+        --             gl.rotate(360/60*5, 0, 0, 1)
+        --         end
+        --     gl.popMatrix()
+        -- end
 
         local function hand(len, thick, angle)
             gl.pushMatrix()
@@ -1960,9 +1973,15 @@ local function Scheduler(page_source, job_queue)
                     instance.is_visible = false -- Hide if generation fails
                     instance.draw_details = nil
                 end
+                -- If you want a trigger to only activate ONE specific QR code and hide others,
+                -- you might add logic here to set other_instance.is_visible = false
+                -- For now, a trigger activates its corresponding QR without affecting others that might be visible.
             end
         end
 
+        -- If no QR instance was specifically updated by this trigger, 
+        -- AND this trigger is not one of the known QR generation triggers for predefined instances,
+        -- then hide all QR codes. This prevents unrelated triggers from leaving QR codes on screen.
         local is_known_qr_gen_trigger = false
         for _, instance in pairs(qr_code_instances) do
             if instance.trigger_data == trigger_data then
@@ -1981,7 +2000,9 @@ local function Scheduler(page_source, job_queue)
         -- Process normal page navigation using the scheduler
         local pages = page_source.find_by_remote(trigger_data)
         if not pages then
-             return false -- Indicate trigger was not fully handled for page navigation
+            -- If not a page navigation trigger either, and we didn't update a QR, it might be an unhandled trigger.
+            -- The 'hiding all' logic above should cover making sure QRs don't persist incorrectly.
+            return false -- Indicate trigger was not fully handled for page navigation
         end
         enqueue_interactive(pages)
         return true
@@ -3649,7 +3670,53 @@ util.data_mapper{
         else
         end
     end,
+    -- === STEPHEN A. SMITH GIF OVERLAY HANDLERS === (COMMENTED OUT)
+    --[[
 
+    ["gif/load"] = function(data)
+        local asset_name = data and data ~= "" and data or "stephen_a_smith_weed.mp4"
+        load_gif_overlay(asset_name)
+        log("gif_overlay", "Load command received for asset: %s", asset_name)
+    end,
+
+    ["gif/toggle"] = function(data)
+        gif_overlay.enabled = not gif_overlay.enabled
+        log("gif_overlay", "Overlay toggled: %s", gif_overlay.enabled and "enabled" or "disabled")
+    end,
+
+    ["gif/position"] = function(data)
+        local payload = json.decode(data)
+        if type(payload) == "table" then
+            if payload.position then gif_overlay.position = payload.position end
+            if payload.margin then gif_overlay.margin = payload.margin end
+            if payload.custom_x then gif_overlay.custom_x = payload.custom_x end
+            if payload.custom_y then gif_overlay.custom_y = payload.custom_y end
+            log("gif_overlay", "Position updated: %s (margin: %d)", gif_overlay.position, gif_overlay.margin)
+        elseif type(payload) == "string" then
+            gif_overlay.position = payload
+            log("gif_overlay", "Position set to: %s", payload)
+        end
+    end,
+
+    ["gif/appearance"] = function(data)
+        local payload = json.decode(data)
+        if type(payload) == "table" then
+            if payload.scale then gif_overlay.scale = payload.scale end
+            if payload.alpha then gif_overlay.alpha = payload.alpha end
+            log("gif_overlay", "Appearance updated: scale=%.2f, alpha=%.2f", gif_overlay.scale, gif_overlay.alpha)
+        end
+    end,
+
+    ["gif/status"] = function(data)
+        log("gif_overlay", "=== STEPHEN A. SMITH GIF OVERLAY STATUS ===")
+        log("gif_overlay", "Enabled: %s", tostring(gif_overlay.enabled))
+        log("gif_overlay", "Position: %s (margin: %d)", gif_overlay.position, gif_overlay.margin)
+        log("gif_overlay", "Scale: %.2f, Alpha: %.2f", gif_overlay.scale, gif_overlay.alpha)
+        log("gif_overlay", "Custom Position: %.1f%%, %.1f%%", gif_overlay.custom_x, gif_overlay.custom_y)
+        log("gif_overlay", "Image Loaded: %s", gif_overlay.image and "yes" or "no")
+        log("gif_overlay", "===============================")
+    end,
+    --]]
     -- Simple test to verify API is working
     ["logo/ping"] = function(data)
         print("LOGO PING RECEIVED: " .. tostring(data))
@@ -3690,6 +3757,10 @@ local function initialize_qr_codes()
     end
 end
 
+-- Call initialization after everything is set up, perhaps before first render or after config loaded
+-- For now, let's assume it's called after first config update where current_setup_id is known.
+-- A better place might be at the very end of the script or after the first config_updated event.
+-- To ensure current_setup_id is available, let's call it after the first config is processed.
 local first_config_loaded = false
 node.event("config_updated", function(config)
     -- ... (existing config_updated logic for layouts, background, current_setup_id) ...
