@@ -156,7 +156,6 @@ local function log(system, format, ...)
     return print(string.format("[%s] " .. format, system, ...))
 end
 
--- Now we can safely use the log function for dimensions
 log("INIT", "Screen dimensions after log function defined")
 log("INIT", "NATIVE_WIDTH x NATIVE_HEIGHT = %d x %d", NATIVE_WIDTH, NATIVE_HEIGHT)
 
@@ -270,7 +269,6 @@ local function Screen()
         local width, height = config.resolution[1], config.resolution[2]
         log("screen", "configured content resolution is %dx%d", width, height)
         
-        -- Debug: Print all screen-related dimensions using log function
         log("screen", "=== SCREEN CONFIG DEBUG ===")
         log("screen", "Configured Resolution: %dx%d", width, height)
         log("screen", "Rotation: %d degrees", rotation)
@@ -513,7 +511,6 @@ local function Countdowns()
 end
 
 local Countdowns = Countdowns()
--- clock object pointing to the configured schedule timezone
 local schedule_clock = setmetatable({
     tz = "UTC",
 }, {
@@ -538,14 +535,8 @@ local function clock_for_tz_or_default(tz)
 end
 
 local SharedData = function()
-    -- {
-    --    scope: { key: data }
-    -- }
-    local data = {}
+     local data = {}
 
-    -- {
-    --    key: { scope: listener }
-    -- }
     local listeners = {}
 
     local function call_listener(scope, listener, key, value)
@@ -764,7 +755,6 @@ local function ScrollerTile(asset, config, x1, y1, x2, y2)
         local impl = tile_loader.modules["scroller"]
         if impl then
             log("scroller", "scroller module found, initializing...")
-            -- Convert color arrays to color objects with .r, .g, .b, .a properties
             local function convert_color(color_array)
                 if not color_array then return {r=1, g=1, b=1, a=1} end
                 return {
@@ -805,10 +795,6 @@ local function ScrollerTile(asset, config, x1, y1, x2, y2)
 end
 
 local function ImageTile(asset, config, x1, y1, x2, y2)
-    -- config:
-    --   kenburns: true/false
-    --   fade_time: 0-1
-    --   fit: true/false
 
     local img = ImageCache.register(asset.asset_name, 10)
     local fade_time = config.fade_time or 0
@@ -816,7 +802,6 @@ local function ImageTile(asset, config, x1, y1, x2, y2)
     return function(starts, ends)
         helper.wait_t(starts - 2)
 
-        -- force loading and keep around for 3 seconds minimum
         img(3)
 
         local effect, width, height = gl_effects[
@@ -3064,7 +3049,6 @@ util.data_mapper{
         end
     end,
     ["device_info/page"] = function(data)
-        -- Default behavior: toggle or turn on
         print("Testing device_info/page-----------------------------------------------------------------------------")
         device_info_page_mode = not device_info_page_mode
     end,
@@ -3181,7 +3165,6 @@ util.data_mapper{
             end
         end
     end,
-    -- === COKE ZERO OVERLAY HANDLERS ===
     ["coke/load"] = function(data)
         local asset_name = data and data ~= "" and data or "Coke_Zero_Revised_1_lowres.png"
         load_coke_overlay(asset_name)
@@ -3215,7 +3198,6 @@ util.data_mapper{
             log("coke_overlay", "Appearance updated: scale=%.2f, alpha=%.2f", coke_overlay.scale, coke_overlay.alpha)
         end
     end,
-    -- === SCHEDULED ASSET OVERLAY HANDLERS ===
     ["schedule_overlay/trigger"] = function(data)
         local trigger = data and tostring(data) or ""
         if trigger == "" then
@@ -3271,14 +3253,11 @@ util.data_mapper{
     end,
 
     ["overlay/clear"] = function(data)
-        -- Hide QR codes
         for id, instance in pairs(qr_code_instances) do
             instance.is_visible = false
         end
-        -- Disable coke overlay 
         coke_overlay.enabled = false
         coke_overlay.image = nil
-        -- Disable scheduled overlay
         scheduled_overlay.enabled = false
         scheduled_overlay.image = nil
         scheduled_overlay.current_asset = nil
@@ -3298,18 +3277,15 @@ util.data_mapper{
         log("coke_overlay", "===============================")
     end,
     
-    -- === LOGO OVERLAY SWITCHING API ===
 
     ["logo/switch"] = function(data)
         local start_time = sys.now()
         print("LOGO SWITCH CALLED! Raw data: " .. tostring(data))
         
-        -- Data comes directly as the form field value, no JSON parsing needed
         local trigger = data and tostring(data) or "1"
         
         print("FINAL TRIGGER VALUE: " .. trigger)
         
-        -- Use the optimized preloaded system for instant switching
         if coke_overlay.logos[trigger] then
             local asset_name = coke_overlay.logos[trigger]
             load_coke_overlay(asset_name)
@@ -3355,7 +3331,6 @@ util.data_mapper{
             coke_overlay.current_asset or "unknown", 
             tostring(coke_overlay.enabled))
         
-        -- Show preloading status
         local preloaded_count = 0
         for asset_name, image in pairs(coke_overlay.preloaded_images) do
             preloaded_count = preloaded_count + 1
@@ -3367,7 +3342,6 @@ util.data_mapper{
         log("logo_switch", "========================")
     end,
     
-    -- Test endpoint to verify API calls are working
     ["logo/test"] = function(data)
         log("logo_switch", "=== LOGO TEST ENDPOINT ===")
         log("logo_switch", "API call received successfully!")
@@ -3376,10 +3350,7 @@ util.data_mapper{
         log("logo_switch", "=========================")
     end,
     
-    -- Comprehensive debug endpoint to test data formats
-    
-    -- API: Create or update QR code instance
-    ["qr/instance"] = function(data)
+     ["qr/instance"] = function(data)
         local payload = json.decode(data or "{}")
         
         if not payload.asset_id then
@@ -3411,7 +3382,6 @@ util.data_mapper{
         end
     end,
     
-    -- API: Remove QR code instance
     ["qr/instance/remove"] = function(data)
         local payload = json.decode(data)
         if payload.asset_id and remove_qr_instance(payload.asset_id) then
@@ -3419,7 +3389,6 @@ util.data_mapper{
         end
     end,
     
-    -- API: List all QR code instances
     ["qr/instance/list"] = function(data)
         local instances = list_qr_instances()
         log("qr", "QR instances: %d", table.getn(instances))
@@ -3428,7 +3397,6 @@ util.data_mapper{
         end
     end,
     
-    -- API: Get specific QR instance info
     ["qr/instance/get"] = function(data)
         local payload = json.decode(data)
         
@@ -3449,7 +3417,6 @@ util.data_mapper{
             print("[QR_PACKAGE] No QR instance found for asset_id: " .. payload.asset_id)
         end
     end,
-    -- SETUP-WIDE: QR instance management that syncs across all devices
     ["setup/qr/instance"] = function(data)
         local payload = json.decode(data)
         
@@ -3460,19 +3427,16 @@ util.data_mapper{
         
         local position_config = {}
         
-        -- Extract position configuration from payload
         if payload.position then position_config.position = payload.position end
         if payload.margin then position_config.margin = payload.margin end
         if payload.custom_x then position_config.custom_x = payload.custom_x end
         if payload.custom_y then position_config.custom_y = payload.custom_y end
         
-        -- Create or update the instance
         local instance_id = create_or_update_qr_instance(payload.asset_id, position_config)
         
         log("QR_SETUP", "Setup-wide QR instance created/updated for asset_id: %s (instance: %s)", 
             payload.asset_id, instance_id)
         
-        -- If auto_show is true, immediately make it visible and generate QR
         if payload.auto_show then
             local instance = qr_code_instances[instance_id]
             if instance then
@@ -3488,7 +3452,6 @@ util.data_mapper{
         end
     end,
     
-    -- SETUP-WIDE: Remove QR instance across all devices
     ["setup/qr/instance/remove"] = function(data)
         local payload = json.decode(data)
         
@@ -3520,15 +3483,12 @@ util.data_mapper{
             log("QR_SETUP", "  No QR instances found")
         end
     end,
-    -- API: Create or update QR code instance (with root/ prefix)
     ["root/qr/instance"] = function(data)
         print("[QR_PACKAGE] root/qr/instance handler called")
         print("[QR_PACKAGE] Raw data type: " .. type(data))
         print("[QR_PACKAGE] Raw data content: '" .. tostring(data) .. "'")
         print("[QR_PACKAGE] Raw data length: " .. string.len(tostring(data)))
         
-        -- If data is empty, it might be that info-beamer passes the data differently
-        -- Let's try to handle both cases: direct JSON string and empty data
         local payload
         local success, err = pcall(function()
             if data == "" or data == nil then
@@ -3562,18 +3522,15 @@ util.data_mapper{
         
         local position_config = {}
         
-        -- Extract position configuration from payload
         if payload.position then position_config.position = payload.position end
         if payload.margin then position_config.margin = payload.margin end
         if payload.custom_x then position_config.custom_x = payload.custom_x end
         if payload.custom_y then position_config.custom_y = payload.custom_y end
         
-        -- Create or update the instance
         local instance_id = create_or_update_qr_instance(payload.asset_id, position_config)
         
         print("[QR_PACKAGE] Successfully created/updated QR instance for asset_id: " .. payload.asset_id .. " (instance: " .. instance_id .. ")")
         
-        -- If auto_show is true, immediately make it visible and generate QR
         if payload.auto_show then
             local instance = qr_code_instances[instance_id]
             if instance then
@@ -3594,7 +3551,6 @@ util.data_mapper{
         end
     end,
     
-    -- API: Remove QR code instance (with root/ prefix)
     ["root/qr/instance/remove"] = function(data)
         print("[QR_PACKAGE] root/qr/instance/remove handler called")
         local payload = json.decode(data)
@@ -3612,7 +3568,6 @@ util.data_mapper{
         end
     end,
     
-    -- API: List all QR code instances (with root/ prefix)
     ["root/qr/instance/list"] = function(data)
         print("[QR_PACKAGE] root/qr/instance/list handler called")
         local instances = list_qr_instances()
@@ -3626,17 +3581,14 @@ util.data_mapper{
             print("[QR_PACKAGE]   No QR instances found")
         end
     end,
-    -- Test endpoint to verify package is updated
     ["root/test"] = function(data)
         print("[TEST] Package is running latest code! Data: " .. tostring(data))
         print("[TEST] Current time: " .. tostring(sys.now()))
         print("[TEST] Total QR instances: " .. table.getn(qr_code_instances))
     end,
     
-    -- Debug endpoint to test different data formats
     ["root/debug_data"] = function(data)
         
-        -- Try parsing as JSON
         local success, parsed = pcall(function()
             return json.decode(data)
         end)
@@ -3650,13 +3602,11 @@ util.data_mapper{
         end
     end,
 
-    -- Simple test to verify API is working
     ["logo/ping"] = function(data)
         print("LOGO PING RECEIVED: " .. tostring(data))
         log("logo_test", "PING received with data: %s", tostring(data))
     end,
     
-    -- Debug endpoint to check stream status and settings
     ["stream/debug"] = function(data)
         log("stream_debug", "=== STREAM DEBUG INFO ===")
         local all_streams = streams._get_all_streams()
@@ -3692,7 +3642,6 @@ end
 
 local first_config_loaded = false
 node.event("config_updated", function(config)
-    -- ... (existing config_updated logic for layouts, background, current_setup_id) ...
     layouts = config.layouts
     for _, layout in ipairs(layouts) do
         for _, tile in ipairs(layout.tiles) do
@@ -3710,16 +3659,13 @@ node.event("config_updated", function(config)
         log("config_updated", "Stored setup_id: %s", current_setup_id)
     else
         log("config_updated", "setup_id not found in config metadata")
-        -- current_setup_id remains "UNKNOWN_SETUP" or its previous value
     end
 
-    -- Initialize/Pre-generate QR codes after the first config (to ensure current_setup_id is set)
     if not first_config_loaded and current_setup_id ~= "UNKNOWN_SETUP" then
         initialize_qr_codes()
         first_config_loaded = true
     end
 
-    -- ... (existing config_updated logic for scheduler reset) ...
     local setup_id = config.__metadata.setup_id
     local config_hash = config.__metadata.config_hash
     local reset_mode = config.reset_mode
@@ -3772,7 +3718,6 @@ function node.render()
 
     dispatch_to_all_tiles("overlay")
 
-    -- === Draw QR Code Instances ===
     local now_for_qr = sys.now() -- Use consistent time for expiry checks
     local total_drawn_qr = 0
 
@@ -3781,14 +3726,10 @@ function node.render()
             local pos_config = instance.position_config
             local dimensions = instance.draw_details.dimensions
 
-            -- Use actual dimensions from draw_details for positioning calculation
             local qr_width = dimensions.total_width
             local qr_height = dimensions.total_height
             local margin = pos_config.margin or 20 -- Default margin if not set
 
-            -- Calculate position based on selected corner or custom coordinates
-            -- Note: The draw function expects the top-left corner (x, y) of the QR code *data* area,
-            -- not including the border or title height.
             local qr_draw_x, qr_draw_y
             if pos_config.position == "top-left" then
                 qr_draw_x = margin + dimensions.border_size
@@ -3803,37 +3744,27 @@ function node.render()
                 qr_draw_x = NATIVE_WIDTH - qr_width - margin + dimensions.border_size
                 qr_draw_y = NATIVE_HEIGHT - qr_height - margin + dimensions.title_height + dimensions.border_size
             elseif pos_config.position == "custom" then
-                -- Convert percentage to pixels for custom positioning
-                -- Position relative to NATIVE_WIDTH/NATIVE_HEIGHT (gl.setup dimensions)
-                -- This ensures consistent positioning regardless of screen settings
                 local x_percent = pos_config.custom_x or 0
                 local y_percent = pos_config.custom_y or 0
                 
-                -- Calculate base position as percentage of gl.setup dimensions
                 local base_x = NATIVE_WIDTH * x_percent / 100
                 local base_y = NATIVE_HEIGHT * y_percent / 100
                 
-                -- For custom positioning, we position the entire QR code (including border/title)
-                -- at the specified percentage, then adjust to get the data area coordinates
                 qr_draw_x = base_x + dimensions.border_size
                 qr_draw_y = base_y + dimensions.title_height + dimensions.border_size
                 
-                -- Debug output for custom positioning
                 print(string.format("QR Instance %s: Custom positioning - %.1f%% x %.1f%% = (%.0f, %.0f) on %dx%d canvas", 
                     id, x_percent, y_percent, base_x, base_y, NATIVE_WIDTH, NATIVE_HEIGHT))
             else
-                -- Default to bottom-right if invalid position
                 qr_draw_x = NATIVE_WIDTH - qr_width - margin + dimensions.border_size
                 qr_draw_y = NATIVE_HEIGHT - qr_height - margin + dimensions.title_height + dimensions.border_size
             end
 
-            -- Try to draw the QR code instance
             local drawn = qrcode_overlay.draw_qr(instance.draw_details, qr_draw_x, qr_draw_y, now_for_qr)
 
             if drawn then
                 total_drawn_qr = total_drawn_qr + 1
             else
-                -- If drawing failed (e.g., expired), mark as not visible
                 print("QR instance " .. id .. " failed to draw (likely expired). Hiding.")
                 instance.is_visible = false
                 instance.draw_details = nil -- Clear details
